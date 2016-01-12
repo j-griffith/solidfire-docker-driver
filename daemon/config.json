@@ -1,0 +1,7 @@
+{
+    "Endpoint": "https://admin:admin@192.168.160.3/json-rpc/7.0",
+    "SVIP": "10.10.64.3",
+    "TenantName": "docker",
+    "DefaultVolSize": 1,
+    "MountPoint": "/var/lib/sfmount"
+}

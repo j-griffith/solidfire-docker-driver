@@ -1,0 +1,7 @@
+export SF_LOGIN=admin
+export SF_PASSWORD=admin
+export SF_ENDPOINT="https://admin:admin@192.168.160.3/json-rpc/7.0"
+export SF_SVIP="172.16.140.22:3260"
+export SF_DEFAULT_ACCOUNTID="5"
+export SF_DEFAULT_SIZE="1GiB"
+
