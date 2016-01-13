@@ -68,8 +68,14 @@ var (
 	}
 
 	volumeAttachCmd = cli.Command{
-		Name:   "attach",
-		Usage:  "iscsi attach volume to host (requires permissions and iscsiadm): `attach VOLUME-ID`",
+		Name:  "attach",
+		Usage: "iscsi attach volume to host (requires permissions and iscsiadm): `attach VOLUME-ID`",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "iface",
+				Usage: "Device file of iSCSI interface (initiator): `[--iface /dev/p1p2]`",
+			},
+		},
 		Action: cmdVolumeAttach,
 	}
 
@@ -94,8 +100,11 @@ func cmdVolumeAttach(c *cli.Context) {
 		err = errors.New("Failed to find volume for attach")
 		return
 	}
-
-	path, device, err := client.AttachVolume(&v)
+	netDev := c.String("iface")
+	if c.String("iface") == "" {
+		netDev = "default"
+	}
+	path, device, err := client.AttachVolume(&v, netDev)
 	if err != nil {
 		fmt.Println("Error encountered while performing iSCSI attach on Volume: ", volID)
 		fmt.Println(err)

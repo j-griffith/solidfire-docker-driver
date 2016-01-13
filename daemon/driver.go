@@ -16,30 +16,18 @@ import (
 )
 
 type SolidFireDriver struct {
-	TenantName   string
-	TenantID     int64
-	DefaultVolSz int64
-	VagID        int64
-	MountPoint   string
-	Client       *sfapi.Client
-	Mutex        *sync.Mutex
-}
-
-type Configuration struct {
-	Endpoint          string
-	TenantName        string
-	DefaultMountPoint string
-	DefaultVolSize    int64
-	QoSTypes          struct {
-	}
+	TenantName     string
+	TenantID       int64
+	DefaultVolSz   int64
+	VagID          int64
+	MountPoint     string
+	InitiatorIFace string
+	Client         *sfapi.Client
+	Mutex          *sync.Mutex
 }
 
 func NewSolidFireDriverFromConfig(c *Config) SolidFireDriver {
 	var tenantID int64
-	var listVagReq sfapi.ListVolumeAccessGroupsRequest
-	var createVagReq sfapi.CreateVolumeAccessGroupRequest
-	var vagID int64
-	log.SetLevel(log.DebugLevel)
 
 	client, _ := sfapi.NewWithArgs(c.EndPoint, c.SVIP, c.TenantName, c.DefaultVolSize)
 	req := sfapi.GetAccountByNameRequest{
@@ -52,27 +40,22 @@ func NewSolidFireDriverFromConfig(c *Config) SolidFireDriver {
 			Username: c.TenantName,
 		}
 		tenantID, err = client.AddAccount(&req)
+		if err != nil {
+			log.Fatalf("Failed to initialize solidfire driver creating tenant: ", err)
+		}
 	} else {
 		tenantID = account.AccountID
-	}
-
-	vags, err := client.ListVolumeAccessGroups(&listVagReq)
-	if err != nil {
-	}
-	for _, v := range vags {
-		if v.Name == c.TenantName {
-			vagID = v.VAGID
-		}
-	}
-	if vagID == 0 {
-		createVagReq.Name = c.TenantName
-		vagID, _ = client.CreateVolumeAccessGroup(&createVagReq)
-		client.CreateVolumeAccessGroup(&createVagReq)
 	}
 
 	baseMountPoint := "/var/lib/solidfire/mount"
 	if c.MountPoint != "" {
 		baseMountPoint = c.MountPoint
+	}
+
+	iscsiInterface := "default"
+
+	if c.InitiatorIFace != "" {
+		iscsiInterface = c.InitiatorIFace
 	}
 
 	_, err = os.Lstat(baseMountPoint)
@@ -83,18 +66,25 @@ func NewSolidFireDriverFromConfig(c *Config) SolidFireDriver {
 	}
 
 	d := SolidFireDriver{
-		TenantName:   c.TenantName,
-		TenantID:     tenantID,
-		Client:       client,
-		VagID:        vagID,
-		Mutex:        &sync.Mutex{},
-		DefaultVolSz: 1,
-		MountPoint:   c.MountPoint,
+		TenantName:     c.TenantName,
+		TenantID:       tenantID,
+		Client:         client,
+		Mutex:          &sync.Mutex{},
+		DefaultVolSz:   1,
+		MountPoint:     c.MountPoint,
+		InitiatorIFace: iscsiInterface,
 	}
+	log.Debugf("Succesfuly initialized SolidFire Docker driver")
 	return d
 }
 
 func (d SolidFireDriver) Create(r volume.Request) volume.Response {
+	// TODO(jdg):  Add a check of options her that looks for an FS-Type
+	// specifier.  What we'll do is add it to the attributes of the volume on
+	// create, then during mount, we can check that, and format it to the
+	// requested type.  Just be sure that when we do that we pop the attribute
+	// off so we don't "reformat" :)
+	// For now we just do ext4 only
 	log.Infof("Create volume %s on %s\n", r.Name, "solidfire")
 	d.Mutex.Lock()
 	defer d.Mutex.Unlock()
@@ -137,7 +127,8 @@ func (d SolidFireDriver) Remove(r volume.Request) volume.Response {
 
 func (d SolidFireDriver) Path(r volume.Request) volume.Response {
 	log.Printf("Fetching Path for volume %s on %s\n", r.Name, "solidfire")
-	return volume.Response{Mountpoint: filepath.Join("/var/lib/mount", r.Name)}
+	// TODO(jdg):  Make sure it's actually mounted :)
+	return volume.Response{Mountpoint: filepath.Join(d.MountPoint, r.Name)}
 }
 
 func (d SolidFireDriver) Mount(r volume.Request) volume.Response {
@@ -149,44 +140,34 @@ func (d SolidFireDriver) Mount(r volume.Request) volume.Response {
 		log.Errorf("Failed to retrieve volume by name in mount operation: ", r.Name)
 		return volume.Response{Err: err.Error()}
 	}
-	path, device, err := d.Client.AttachVolume(&v)
+	//TODO(jdg): Ensure we're not already attached or mounted
+	path, device, err := d.Client.AttachVolume(&v, d.InitiatorIFace)
+	if path == "" || device == "" && err == nil {
+		log.Error("Missing path or device, but err not set?")
+		log.Debug("Path: ", path, ",Device: ", device)
+		return volume.Response{Err: err.Error()}
+
+	}
 	if err != nil {
 		log.Errorf("Failed to perform iscsi attach of volume %s: %s", err)
 		return volume.Response{Err: err.Error()}
 	}
 	log.Debugf("Attached volume at (path, devfile): %s, %s", path, device)
+	if sfapi.GetFSType(device) == "" {
+		if sfapi.FormatVolume(device, "ext4") != nil {
+			log.Errorf("Failed to format device: ", device)
+			return volume.Response{Err: err.Error()}
+		}
+	}
 	// Mount it to the local mountpoint
-	/*
-		s, ok := d.volumes[m]
-		if ok && s.connections > 0 {
-			s.connections++
-			return volume.Response{Mountpoint: m}
-		}
-
-		fi, err := os.Lstat(m)
-
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(m, 0755); err != nil {
-				return volume.Response{Err: err.Error()}
-			}
-		} else if err != nil {
-			return volume.Response{Err: err.Error()}
-		}
-
-		if fi != nil && !fi.IsDir() {
-			return volume.Response{Err: fmt.Sprintf("%v already exist and it's not a directory", m)}
-		}
-
-		if err := d.mountVolume(r.Name, m); err != nil {
-			return volume.Response{Err: err.Error()}
-		}
-
-		d.volumes[m] = &volume_name{name: r.Name, connections: 1}
-	*/
-	return volume.Response{Mountpoint: "foo"}
+	if sfapi.Mount(device, d.MountPoint+"/"+r.Name) != nil {
+		return volume.Response{Err: err.Error()}
+	}
+	return volume.Response{Mountpoint: d.MountPoint + "/" + r.Name}
 }
 
 func (d SolidFireDriver) Unmount(r volume.Request) volume.Response {
-	log.Printf("Unmount volume %s on %s\n", r.Name, "somewhere")
-	return volume.Response{Mountpoint: "foo"}
+	sfapi.Umount(filepath.Join(d.MountPoint, r.Name))
+	d.Client.DetachVolume(0, r.Name)
+	return volume.Response{}
 }

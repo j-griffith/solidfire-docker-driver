@@ -19,6 +19,7 @@ type Config struct {
 	DefaultVolSize int64 //Default volume size in GiB
 	MountPoint     string
 	SVIP           string
+	InitiatorIFace string //iface to use of iSCSI initiator
 	//Types       []map[string]QoS
 }
 
@@ -38,14 +39,14 @@ func processConfig(fname string) (Config, error) {
 func main() {
 	cfgFile := flag.String("config", "/var/lib/solidfire/solidfire.json", "Configuration file for SolidFire Docker Daemon.")
 	debug := flag.Bool("debug", false, "Enable debug logging.")
-	log.SetLevel(log.DebugLevel)
 	flag.Parse()
 	if *debug == true {
 		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
 	}
 
 	cfg, _ := processConfig(*cfgFile)
-	log.Info(cfg.EndPoint)
 	d := NewSolidFireDriverFromConfig(&cfg)
 	h := volume.NewHandler(d)
 	log.Info(h.ServeUnix("root", "solidfire"))

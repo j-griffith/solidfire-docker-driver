@@ -124,64 +124,44 @@ func (c *Client) DetachVolume(volumeID int64, name string) (err error) {
 	return
 }
 
-func (c *Client) AttachVolume(v *Volume) (string, string, error) {
+func (c *Client) AttachVolume(v *Volume, iface string) (path, device string, err error) {
+	var req GetAccountByIDRequest
+	path = "/dev/disk/by-path/ip-" + c.SVIP + "-iscsi-" + v.Iqn + "-lun-0"
+
 	if c.SVIP == "" {
-		err := errors.New("Unable to perform iSCSI actions without setting SVIP")
-		return "", "", err
-	}
-	path := "/dev/disk/by-path/ip-"
-	if iscsiSupported() == false {
-		err := errors.New("Unable to attach, open-iscsi tools not found on host")
-		return "", "", err
+		err = errors.New("Unable to perform iSCSI actions without setting SVIP")
+		log.Error(err)
+		return path, device, err
 	}
 
-	path = path + c.SVIP + "-iscsi-" + v.Iqn + "-lun-0"
-	device := getDeviceFileFromIscsiPath(path)
+	if iscsiSupported() == false {
+		err := errors.New("Unable to attach, open-iscsi tools not found on host")
+		log.Error(err)
+		return path, device, err
+	}
+
+	req.AccountID = v.AccountID
+	a, err := c.GetAccountByID(&req)
+	if err != nil {
+		log.Error("Failed to get account ", v.AccountID, ": ", err)
+		return path, device, err
+	}
+
+	// Make sure it's not already attached
 	if waitForPathToExist(path, 1) {
+		log.Debug("Get device file from path: ", path)
+		device = strings.TrimSpace(getDeviceFileFromIscsiPath(path))
 		return path, device, nil
 	}
 
-	targets, err := iscsiDiscovery(c.SVIP)
+	err = LoginWithChap(v.Iqn, c.SVIP, a.Username, a.InitiatorSecret, iface)
 	if err != nil {
-		log.Error("Failure encountered during iSCSI Discovery: ", err)
-		log.Error("Have you setup the Volume Access Group?")
-		err = errors.New("iSCSI Discovery failed")
-		return "", "", err
+		log.Error(err)
+		return path, device, err
 	}
-
-	if len(targets) < 1 {
-		log.Warning("Discovered zero targets at: ", c.SVIP)
-		return "", "", err
+	if waitForPathToExist(path, 5) {
+		device = strings.TrimSpace(getDeviceFileFromIscsiPath(path))
+		return path, device, nil
 	}
-
-	tgt := ISCSITarget{}
-	for _, t := range targets {
-		if strings.Contains(t, v.Iqn) {
-			tgt.Discovery = t
-		}
-	}
-	if tgt.Discovery == "" {
-		log.Error("Failed to discover requested target: ", v.Iqn, " on: ", c.SVIP)
-		return "", "", err
-	}
-	log.Debug("Discovered target: ", tgt.Discovery)
-
-	parsed := strings.FieldsFunc(tgt.Discovery, func(r rune) bool {
-		return r == ',' || r == ' '
-	})
-
-	tgt.Ip = parsed[0]
-	tgt.Iqn = parsed[2]
-	err = iscsiLogin(&tgt)
-	if err != nil {
-		log.Error("Failed to connect to iSCSI target (", tgt.Iqn, ")")
-		return "", "", err
-	}
-	if waitForPathToExist(path, 10) == false {
-		log.Error("Failed to find connection after 10 seconds")
-		return "", "", err
-	}
-
-	device = strings.TrimSpace(getDeviceFileFromIscsiPath(path))
 	return path, device, nil
 }

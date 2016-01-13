@@ -186,6 +186,11 @@ type CreateVolumeAccessGroupResult struct {
 	} `json:"result"`
 }
 
+type AddInitiatorsToVolumeAccessGroupRequest struct {
+	Initiators []string `json:"initiators"`
+	VAGID      int64    `json:"volumeAccessGroupID"`
+}
+
 type ListVolumeAccessGroupsRequest struct {
 	StartVAGID int64 `json:"startVolumeAccessGroupID,omitempty"`
 	Limit      int64 `json:"limit,omitempty"`
