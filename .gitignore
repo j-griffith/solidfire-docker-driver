@@ -1,0 +1,8 @@
+*
+!.gitignore
+!*.go
+./daemon/daemon
+./solidfire-docker-driver
+*.swp
+*.swo
+*~
