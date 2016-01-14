@@ -60,7 +60,7 @@ func NewWithArgs(endpoint, svip, accountName string, defaultSize int64) (client 
 
 func (c *Client) Request(method string, params interface{}, id int) (response []byte, err error) {
 	if c.Endpoint == "" {
-		log.Debug("Endpoint is not set, unable to issue requests")
+		log.Error("Endpoint is not set, unable to issue requests")
 		err = errors.New("Unable to issue json-rpc requests without specifying Endpoint")
 		return nil, err
 	}

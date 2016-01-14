@@ -9,6 +9,7 @@ import (
 )
 
 func GetInitiatorIqns() ([]string, error) {
+	log.Debug("Begin utils.GetInitiatorIqns")
 	var iqns []string
 	out, err := exec.Command("sudo", "cat", "/etc/iscsi/initiatorname.iscsi").CombinedOutput()
 	if err != nil {
@@ -16,7 +17,6 @@ func GetInitiatorIqns() ([]string, error) {
 		return nil, err
 	}
 	lines := strings.Split(string(out), "\n")
-	// InitiatorName=iqn.1993-08.org.debian:01:d7e03b6fc8fd
 	for _, l := range lines {
 		if strings.Contains(l, "InitiatorName=") {
 			iqns = append(iqns, strings.Split(l, "=")[1])
@@ -26,7 +26,7 @@ func GetInitiatorIqns() ([]string, error) {
 }
 
 func waitForPathToExist(fileName string, numTries int) bool {
-	log.Debug("Check for presence of: ", fileName)
+	log.Debug("Being utils.waitForPathToExist: ", fileName)
 	for i := 0; i < numTries; i++ {
 		_, err := os.Stat(fileName)
 		if err == nil {
@@ -42,7 +42,7 @@ func waitForPathToExist(fileName string, numTries int) bool {
 }
 
 func getDeviceFileFromIscsiPath(iscsiPath string) (devFile string) {
-	log.Debug("Find device file for dev at path: ", iscsiPath)
+	log.Debug("Being utils.getDeviceFileFromIscsiPath: ", iscsiPath)
 	out, err := exec.Command("sudo", "ls", "-la", iscsiPath).CombinedOutput()
 	if err != nil {
 		return
@@ -65,7 +65,7 @@ func iscsiSupported() bool {
 }
 
 func iscsiDiscovery(portal string) (targets []string, err error) {
-	log.Debug("Issue sendtargets: sudo iscsiadm -m discovery -t sendtargets -p ", portal)
+	log.Debugf("Begin utils.iscsiDiscovery (portal: %s)", portal)
 	out, err := exec.Command("sudo", "iscsiadm", "-m", "discovery", "-t", "sendtargets", "-p", portal).CombinedOutput()
 	if err != nil {
 		log.Error("Error encountered in sendtargets cmd: ", out)
@@ -77,7 +77,7 @@ func iscsiDiscovery(portal string) (targets []string, err error) {
 }
 
 func iscsiLogin(tgt *ISCSITarget) (err error) {
-	log.Debugf("Attempt to login to iSCSI target: %v", tgt)
+	log.Debugf("Begin utils.iscsiLogin: %v", tgt)
 	_, err = exec.Command("sudo", "iscsiadm", "-m", "node", "-p", tgt.Ip, "-T", tgt.Iqn, "--login").CombinedOutput()
 	if err != nil {
 		log.Errorf("Received error on login attempt: %v", err)
@@ -86,9 +86,10 @@ func iscsiLogin(tgt *ISCSITarget) (err error) {
 }
 
 func iscsiDisableDelete(tgt *ISCSITarget) (err error) {
+	log.Debugf("Begin utils.iscsiDisableDelete: %v", tgt)
 	_, err = exec.Command("sudo", "iscsiadm", "-m", "node", "-T", tgt.Iqn, "--portal", tgt.Ip, "-u").CombinedOutput()
 	if err != nil {
-		log.Errorf("Error during iscsi logout: ", err)
+		log.Error("Error during iscsi logout: ", err)
 		return
 	}
 	_, err = exec.Command("sudo", "iscsiadm", "-m", "node", "-o", "delete", "-T", tgt.Iqn).CombinedOutput()
@@ -96,6 +97,7 @@ func iscsiDisableDelete(tgt *ISCSITarget) (err error) {
 }
 
 func GetFSType(device string) string {
+	log.Debugf("Begin utils.GetFSType: %s", device)
 	fsType := ""
 	out, err := exec.Command("blkid", device).CombinedOutput()
 	if err != nil {
@@ -113,7 +115,8 @@ func GetFSType(device string) string {
 	return fsType
 }
 
-func FormatVolume(device string, fsType string) error {
+func FormatVolume(device, fsType string) error {
+	log.Debugf("Begin utils.FormatVolume: %s, %s", device, fsType)
 	cmd := "mkfs.ext4"
 	if fsType == "xfs" {
 		cmd = "mkfs.xfs"
@@ -125,9 +128,10 @@ func FormatVolume(device string, fsType string) error {
 }
 
 func Mount(device, mountpoint string) error {
+	log.Debugf("Begin utils.Mount device: %s on: %s", device, mountpoint)
 	out, err := exec.Command("mkdir", mountpoint).CombinedOutput()
 	out, err = exec.Command("mount", device, mountpoint).CombinedOutput()
-	log.Debugf("Response from mount ", device, " at ", mountpoint, ": ", string(out))
+	log.Debug("Response from mount ", device, " at ", mountpoint, ": ", string(out))
 	if err != nil {
 		log.Error("Error in mount: ", err)
 	}
@@ -135,22 +139,24 @@ func Mount(device, mountpoint string) error {
 }
 
 func Umount(mountpoint string) error {
+	log.Debugf("Begin utils.Umount: %s", mountpoint)
 	out, err := exec.Command("umount", mountpoint).CombinedOutput()
-	log.Debugf("Response from umount ", mountpoint, ": ", out)
+	log.Debug("Response from umount ", mountpoint, ": ", out)
 	return err
 }
 
 func iscsiadmCmd(args []string) error {
+	log.Debugf("Being utils.iscsiadmCmd: iscsiadm %+v", args)
 	resp, err := exec.Command("iscsiadm", args...).CombinedOutput()
 	if err != nil {
 		log.Error("Error encountered running iscsiadm ", args, ": ", resp)
 		log.Error("Error message: ", err)
 	}
-	log.Error("WTF... ", err)
 	return err
 }
 
 func LoginWithChap(tiqn, portal, username, password, iface string) error {
+	log.Debugf("Begin utils.LoginWithChap: iqn: %s, portal: %s, username: %s, password=xxxx, iface: %s", tiqn, portal, username, iface)
 	args := []string{"-m", "node", "-T", tiqn, "-p", portal + ":3260"}
 	createArgs := append(args, []string{"--interface", iface, "--op", "new"}...)
 
@@ -160,7 +166,6 @@ func LoginWithChap(tiqn, portal, username, password, iface string) error {
 	}
 
 	authMethodArgs := append(args, []string{"--op=update", "--name", "node.session.auth.authmethod", "--value=CHAP"}...)
-	log.Debug("auth args: ", authMethodArgs)
 	if out, err := exec.Command("iscsiadm", authMethodArgs...).CombinedOutput(); err != nil {
 		log.Error("Error running iscsiadm set authmethod: ", err, "{", out, "}")
 		return err

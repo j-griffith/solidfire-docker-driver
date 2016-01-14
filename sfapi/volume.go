@@ -3,7 +3,6 @@ package sfapi
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"strings"
 )
@@ -12,7 +11,7 @@ func (c *Client) ListActiveVolumes(listVolReq *ListActiveVolumesRequest) (volume
 	response, err := c.Request("ListActiveVolumes", listVolReq, newReqID())
 	if err != nil {
 		log.Error(err)
-		return
+		return nil, err
 	}
 	var result ListVolumesResult
 	if err := json.Unmarshal([]byte(response), &result); err != nil {
@@ -20,14 +19,14 @@ func (c *Client) ListActiveVolumes(listVolReq *ListActiveVolumesRequest) (volume
 		return nil, err
 	}
 	volumes = result.Result.Volumes
-	return
+	return nil, err
 }
 
 func (c *Client) GetVolume(sfID int64, sfName string) (v Volume, err error) {
 	var listReq ListActiveVolumesRequest
 	volumes, err := c.ListActiveVolumes(&listReq)
 	if err != nil {
-		fmt.Println("Error retrieving volumes")
+		log.Error("Error retrieving volumes: ", err)
 		return Volume{}, err
 	}
 	for _, vol := range volumes {
