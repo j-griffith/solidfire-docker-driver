@@ -125,7 +125,8 @@ func cmdVolumeAttach(c *cli.Context) {
 func cmdVolumeDetach(c *cli.Context) {
 	id := c.Args().First()
 	volID, _ := strconv.ParseInt(id, 10, 64)
-	err := client.DetachVolume(volID, "")
+	v, err := client.GetVolume(volID, "")
+	err = client.DetachVolume(v)
 	if err != nil {
 		fmt.Println("Error encountered while performing iSCSI detach of Volume: ", volID)
 		fmt.Println(err)

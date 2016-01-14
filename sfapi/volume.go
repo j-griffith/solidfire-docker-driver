@@ -25,7 +25,6 @@ func (c *Client) ListActiveVolumes(listVolReq *ListActiveVolumesRequest) (volume
 
 func (c *Client) GetVolume(sfID int64, sfName string) (v Volume, err error) {
 	var listReq ListActiveVolumesRequest
-
 	volumes, err := c.ListActiveVolumes(&listReq)
 	if err != nil {
 		fmt.Println("Error retrieving volumes")
@@ -42,7 +41,7 @@ func (c *Client) GetVolume(sfID int64, sfName string) (v Volume, err error) {
 			break
 		}
 	}
-	return
+	return v, err
 }
 
 func (c *Client) CloneVolume(req *CloneVolumeRequest) (vol Volume, err error) {
@@ -104,15 +103,9 @@ func (c *Client) DeleteVolume(volumeID int64) (err error) {
 	return
 }
 
-func (c *Client) DetachVolume(volumeID int64, name string) (err error) {
+func (c *Client) DetachVolume(v Volume) (err error) {
 	if c.SVIP == "" {
 		err = errors.New("Unable to perform iSCSI actions without setting SVIP")
-		return
-	}
-
-	v, err := c.GetVolume(volumeID, name)
-	if err != nil {
-		err = errors.New("Failed to find volume for detach")
 		return
 	}
 	tgt := &ISCSITarget{
