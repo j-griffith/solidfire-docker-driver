@@ -2,7 +2,6 @@ package sfapi
 
 import (
 	"encoding/json"
-	"fmt"
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -10,7 +9,7 @@ func (c *Client) CreateSnapshot(req *CreateSnapshotRequest) (snapshot Snapshot, 
 	response, err := c.Request("CreateSnapshot", req, newReqID())
 	var result CreateSnapshotResult
 	if err := json.Unmarshal([]byte(response), &result); err != nil {
-		log.Fatal(err)
+		log.Error(err)
 		return Snapshot{}, err
 	}
 	return (c.GetSnapshot(result.Result.SnapshotID, ""))
@@ -20,7 +19,6 @@ func (c *Client) GetSnapshot(sfID int64, sfName string) (s Snapshot, err error) 
 	var listReq ListSnapshotsRequest
 	snapshots, err := c.ListSnapshots(&listReq)
 	if err != nil {
-		fmt.Println("Error retrieving snapshots")
 		return Snapshot{}, err
 	}
 	for _, snap := range snapshots {
@@ -43,7 +41,7 @@ func (c *Client) ListSnapshots(req *ListSnapshotsRequest) (snapshots []Snapshot,
 	}
 	var result ListSnapshotsResult
 	if err := json.Unmarshal([]byte(response), &result); err != nil {
-		log.Fatal(err)
+		log.Error(err)
 		return nil, err
 	}
 	snapshots = result.Result.Snapshots
@@ -59,7 +57,7 @@ func (c *Client) RollbackToSnapshot(req *RollbackToSnapshotRequest) (newSnapID i
 	}
 	var result RollbackToSnapshotResult
 	if err := json.Unmarshal([]byte(response), &result); err != nil {
-		log.Fatal(err)
+		log.Error(err)
 		return 0, err
 	}
 	newSnapID = result.Result.SnapshotID

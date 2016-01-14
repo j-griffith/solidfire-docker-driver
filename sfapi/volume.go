@@ -19,7 +19,7 @@ func (c *Client) ListActiveVolumes(listVolReq *ListActiveVolumesRequest) (volume
 		return nil, err
 	}
 	volumes = result.Result.Volumes
-	return nil, err
+	return volumes, err
 }
 
 func (c *Client) GetVolume(sfID int64, sfName string) (v Volume, err error) {

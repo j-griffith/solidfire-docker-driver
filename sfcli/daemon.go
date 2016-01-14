@@ -2,6 +2,7 @@ package sfcli
 
 import (
 	"github.com/codegangsta/cli"
+	"github.com/j-griffith/solidfire-docker-driver/daemon"
 )
 
 var (
@@ -14,11 +15,27 @@ var (
 	}
 
 	daemonStartCmd = cli.Command{
-		Name:   "start",
-		Usage:  "Start the SolidFire Docker Daemon: `start [options] NAME`",
+		Name:  "start",
+		Usage: "Start the SolidFire Docker Daemon: `start [options] NAME`",
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "verbose",
+				Usage: "Include verbose/debug logging: `[--verbose]`",
+			},
+			cli.StringFlag{
+				Name:  "config",
+				Usage: "Config file for daemon (default: /var/lib/solidfire/solidfire.json): `[--config /var/lib/solidfire/solidfire.json]`",
+			},
+		},
 		Action: cmdDaemonStart,
 	}
 )
 
 func cmdDaemonStart(c *cli.Context) {
+	verbose := c.Bool("verbose")
+	cfg := c.String("config")
+	if cfg == "" {
+		cfg = "/var/lib/solidfire/solidfire.json"
+	}
+	daemon.Start(cfg, verbose)
 }

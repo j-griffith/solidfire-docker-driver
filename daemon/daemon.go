@@ -1,8 +1,7 @@
-package main
+package daemon
 
 import (
 	"encoding/json"
-	"flag"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/volume"
 	"io/ioutil"
@@ -36,17 +35,13 @@ func processConfig(fname string) (Config, error) {
 	return conf, nil
 }
 
-func main() {
-	log.WithFields(log.Fields{"pkg": "solidfire-docker-driver"})
-	cfgFile := flag.String("config", "/var/lib/solidfire/solidfire.json", "Configuration file for SolidFire Docker Daemon.")
-	debug := flag.Bool("debug", false, "Enable debug logging.")
-	flag.Parse()
-	if *debug == true {
+func Start(cfgFile string, debug bool) {
+	if debug == true {
 		log.SetLevel(log.DebugLevel)
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
-	cfg, _ := processConfig(*cfgFile)
+	cfg, _ := processConfig(cfgFile)
 	d := NewSolidFireDriverFromConfig(&cfg)
 	h := volume.NewHandler(d)
 	log.Info(h.ServeUnix("root", "solidfire"))

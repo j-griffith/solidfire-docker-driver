@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-//var log = logrus.WithFields(logrus.Fields{"pkg": "solidfire-api"})
-
 type Client struct {
 	MVIP             string
 	SVIP             string
