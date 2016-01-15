@@ -44,6 +44,10 @@ var (
 				Name:  "vag",
 				Usage: "Volume Access Group to add volume to on create: `[--vag 8]`",
 			},
+			cli.StringFlag{
+				Name:  "type",
+				Usage: "Specify a volume type as defined in a SolidFire config file: `[--type Gold]`",
+			},
 		},
 		Action: cmdVolumeCreate,
 	}
@@ -167,8 +171,8 @@ func cmdVolumeCreate(c *cli.Context) {
 	account := int64(0)
 	if c.String("account") == "" && client.DefaultAccountID != 0 {
 		account = client.DefaultAccountID
-	} else if c.String("size") != "" {
-		account, _ = units.ParseStrictBytes(c.String("account"))
+	} else if c.String("account") != "" {
+		account, _ = strconv.ParseInt(c.String("account"), 10, 64)
 	} else {
 		fmt.Println("You must specify an account for volumeCreate")
 		return
@@ -182,9 +186,19 @@ func cmdVolumeCreate(c *cli.Context) {
 		qos.MaxIOPS, _ = strconv.ParseInt(iops[2], 10, 64)
 		qos.BurstIOPS, _ = strconv.ParseInt(iops[2], 10, 64)
 		req.Qos = qos
+	} else if c.String("type") != "" {
+		for _, t := range client.Config.Types {
+			if t.Type == c.String("type") {
+				req.Qos = t.QOS
+			}
+		}
+	} else {
 	}
 
-	v, _ := client.CreateVolume(&req)
+	v, err := client.CreateVolume(&req)
+	if err != nil {
+		fmt.Println("Error creating volume: ", err)
+	}
 	fmt.Println("-------------------------------------------")
 	fmt.Println("Succesfully Created Volume:")
 	fmt.Println("-------------------------------------------")

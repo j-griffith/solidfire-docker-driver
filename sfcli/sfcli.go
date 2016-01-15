@@ -131,6 +131,7 @@ func initClient(c *cli.Context) error {
 	if cfg != "" {
 		conf, _ := sfapi.ProcessConfig(cfg)
 		client, _ = sfapi.NewWithArgs(conf.EndPoint, conf.SVIP, conf.TenantName, conf.DefaultVolSize)
+		client.Config = conf
 	} else {
 		client, _ = sfapi.New()
 	}

@@ -24,6 +24,8 @@ type Client struct {
 	DefaultAPIPort   int
 	DefaultVolSize   int64
 	DefaultAccountID int64
+	VolumeTypes      []VolType
+	Config           Config
 }
 
 type Config struct {
@@ -33,7 +35,12 @@ type Config struct {
 	MountPoint     string
 	SVIP           string
 	InitiatorIFace string //iface to use of iSCSI initiator
-	//Types       []map[string]QoS
+	Types          []VolType
+}
+
+type VolType struct {
+	Type string
+	QOS  QoS
 }
 
 func ProcessConfig(fname string) (Config, error) {

@@ -94,7 +94,11 @@ host.  Here's an example solidfire.json config file:
     "SVIP": "10.10.64.3:3260",
     "TenantName": "docker",
     "DefaultVolSize": 1,
-    "MountPoint": "/var/lib/solidfire/mount"
+    "MountPoint": "/var/lib/solidfire/mount",
+    "Types": [{"Type": "Bronze", "Qos": {"minIOPS": 1000, "maxIOPS": 2000, "burstIOPS": 4000}},
+              {"Type": "Silver", "Qos": {"minIOPS": 4000, "maxIOPS": 6000, "burstIOPS": 8000}},
+              {"Type": "Gold", "Qos": {"minIOPS": 6000, "maxIOPS": 8000, "burstIOPS": 10000}}]
+
   }
   ```
 

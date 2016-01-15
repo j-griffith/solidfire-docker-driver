@@ -55,6 +55,10 @@ func NewSolidFireDriverFromConfig(c *sfapi.Config) SolidFireDriver {
 		iscsiInterface = c.InitiatorIFace
 	}
 
+	if c.Types != nil {
+		client.VolumeTypes = c.Types
+	}
+
 	defaultVolSize := int64(1)
 	if c.DefaultVolSize != 0 {
 		defaultVolSize = c.DefaultVolSize
@@ -98,13 +102,20 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 		log.Info("Creating with default size of: ", vsz)
 	}
 
-	// TODO(jdg): These do nothing right now, add them in round 2
 	if r.Options["qos"] != "" {
 		iops := strings.Split(r.Options["qos"], ",")
 		qos.MinIOPS, _ = strconv.ParseInt(iops[0], 10, 64)
 		qos.MaxIOPS, _ = strconv.ParseInt(iops[1], 10, 64)
 		qos.BurstIOPS, _ = strconv.ParseInt(iops[2], 10, 64)
 		req.Qos = qos
+	}
+
+	if r.Options["Type"] != "" {
+		for _, t := range d.Client.VolumeTypes {
+			if t.Type == r.Options["Type"] {
+				req.Qos = t.QOS
+			}
+		}
 	}
 
 	req.TotalSize = vsz
