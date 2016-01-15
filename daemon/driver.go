@@ -24,7 +24,7 @@ type SolidFireDriver struct {
 	Mutex          *sync.Mutex
 }
 
-func NewSolidFireDriverFromConfig(c *Config) SolidFireDriver {
+func NewSolidFireDriverFromConfig(c *sfapi.Config) SolidFireDriver {
 	var tenantID int64
 
 	client, _ := sfapi.NewWithArgs(c.EndPoint, c.SVIP, c.TenantName, c.DefaultVolSize)

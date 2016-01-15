@@ -26,16 +26,28 @@ type Client struct {
 	DefaultAccountID int64
 }
 
-/*
-type config struct {
-	endpoint           string
-	svip               string
-	defaultSize        string
-	defaultAccountName string
-	defaultAccountID   string
-	types              []map[string]QoS
+type Config struct {
+	TenantName     string
+	EndPoint       string
+	DefaultVolSize int64 //Default volume size in GiB
+	MountPoint     string
+	SVIP           string
+	InitiatorIFace string //iface to use of iSCSI initiator
+	//Types       []map[string]QoS
 }
-*/
+
+func ProcessConfig(fname string) (Config, error) {
+	content, err := ioutil.ReadFile(fname)
+	if err != nil {
+		log.Fatal("Error processing config file: ", err)
+	}
+	var conf Config
+	err = json.Unmarshal(content, &conf)
+	if err != nil {
+		log.Fatal("Error parsing config file: ", err)
+	}
+	return conf, nil
+}
 
 func New() (c *Client, err error) {
 	endpoint := os.Getenv("SF_ENDPOINT")

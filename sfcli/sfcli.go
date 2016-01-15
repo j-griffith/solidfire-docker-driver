@@ -85,7 +85,7 @@ func NewCli(version string) *cli.App {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   "loglevel",
-			Value:  "debug",
+			Value:  "info",
 			Usage:  "Specifies the logging level (debug|warning|error)",
 			EnvVar: "LogLevel",
 		},
@@ -96,13 +96,13 @@ func NewCli(version string) *cli.App {
 			EnvVar: "SVIP",
 		},
 		cli.StringFlag{
-			Name:   "defaultAccountID",
+			Name:   "defaultAccountID, a",
 			Value:  "",
 			Usage:  "Specifies a default SolidFire AccountID to use for operations.",
 			EnvVar: "ACCOUNTID",
 		},
 		cli.StringFlag{
-			Name:  "endpoint",
+			Name:  "endpoint, e",
 			Value: "",
 			Usage: "Specifies the endpoint of the SolidFire cluster to issue cmds to, " +
 				"\n\t(\"https://admin:admin@172.16.140.21/json-rpc/7.0\") .",
@@ -129,7 +129,8 @@ func NewCli(version string) *cli.App {
 func initClient(c *cli.Context) error {
 	cfg := c.GlobalString("config")
 	if cfg != "" {
-		client, _ = sfapi.NewWithArgs("endpoint", "svip", "accountName", 1048576000)
+		conf, _ := sfapi.ProcessConfig(cfg)
+		client, _ = sfapi.NewWithArgs(conf.EndPoint, conf.SVIP, conf.TenantName, conf.DefaultVolSize)
 	} else {
 		client, _ = sfapi.New()
 	}

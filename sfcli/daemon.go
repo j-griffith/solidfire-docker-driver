@@ -19,11 +19,11 @@ var (
 		Usage: "Start the SolidFire Docker Daemon: `start [options] NAME`",
 		Flags: []cli.Flag{
 			cli.BoolFlag{
-				Name:  "verbose",
-				Usage: "Include verbose/debug logging: `[--verbose]`",
+				Name:  "verbose, v",
+				Usage: "Enable verbose/debug logging: `[--verbose]`",
 			},
 			cli.StringFlag{
-				Name:  "config",
+				Name:  "config, c",
 				Usage: "Config file for daemon (default: /var/lib/solidfire/solidfire.json): `[--config /var/lib/solidfire/solidfire.json]`",
 			},
 		},
