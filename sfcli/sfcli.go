@@ -127,9 +127,12 @@ func NewCli(version string) *cli.App {
 }
 
 func initClient(c *cli.Context) error {
-	//cfg := c.GlobalString("config")
-	//FIXME(jdg): Use the daemon's config, or move daemons config somewhere else to use here
-	client, _ = sfapi.New()
+	cfg := c.GlobalString("config")
+	if cfg != "" {
+		client, _ = sfapi.NewWithArgs("endpoint", "svip", "accountName", 1048576000)
+	} else {
+		client, _ = sfapi.New()
+	}
 	updateLogLevel(c)
 	return nil
 }

@@ -26,6 +26,7 @@ type Client struct {
 	DefaultAccountID int64
 }
 
+/*
 type config struct {
 	endpoint           string
 	svip               string
@@ -34,14 +35,14 @@ type config struct {
 	defaultAccountID   string
 	types              []map[string]QoS
 }
+*/
 
 func New() (c *Client, err error) {
 	endpoint := os.Getenv("SF_ENDPOINT")
 	svip := os.Getenv("SF_SVIP")
 	defaultSize := os.Getenv("SF_DEFAULT_SIZE")
 	if endpoint == "" || svip == "" {
-		log.Error("Must specify Endpoint and SVIP to create Client")
-		return
+		return &Client{}, nil
 	}
 	defSize, _ := units.ParseStrictBytes(defaultSize)
 	return NewWithArgs(endpoint, svip, "docker", defSize)
