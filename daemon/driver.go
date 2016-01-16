@@ -14,7 +14,7 @@ import (
 )
 
 type SolidFireDriver struct {
-	TenantName     string
+	//TenantName     string
 	TenantID       int64
 	DefaultVolSz   int64
 	VagID          int64
@@ -24,10 +24,74 @@ type SolidFireDriver struct {
 	Mutex          *sync.Mutex
 }
 
+func verifyConfiguration(cfg *sfapi.Config) {
+	// We want to verify we have everything we need to run the Docker driver
+	if cfg.TenantName == "" {
+		log.Fatal("TenantName required in SolidFire Docker config")
+	}
+	if cfg.EndPoint == "" {
+		log.Fatal("EndPoint required in SolidFire Docker config")
+	}
+	if cfg.DefaultVolSz == 0 {
+		log.Fatal("DefaultVolSz required in SolidFire Docker config")
+	}
+	if cfg.SVIP == "" {
+		log.Fatal("SVIP required in SolidFire Docker config")
+	}
+}
+func New(cfgFile string) SolidFireDriver {
+	var tenantID int64
+	client, _ := sfapi.NewFromConfig(cfgFile)
+
+	req := sfapi.GetAccountByNameRequest{
+		Name: client.DefaultTenantName,
+	}
+	account, err := client.GetAccountByName(&req)
+	if err != nil {
+		req := sfapi.AddAccountRequest{
+			Username: client.DefaultTenantName,
+		}
+		actID, err := client.AddAccount(&req)
+		if err != nil {
+			log.Fatalf("Failed init, unable to create Tenant (%s): %+v", client.DefaultTenantName, err)
+		}
+		tenantID = actID
+	} else {
+		tenantID = account.AccountID
+	}
+
+	baseMountPoint := "/var/lib/solidfire/mount"
+	if client.Config.MountPoint != "" {
+		baseMountPoint = client.Config.MountPoint
+	}
+
+	iscsiInterface := "default"
+	if client.Config.InitiatorIFace != "" {
+		iscsiInterface = client.Config.InitiatorIFace
+	}
+
+	_, err = os.Lstat(baseMountPoint)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(baseMountPoint, 0755); err != nil {
+			log.Fatal("Failed to create Mount directory during driver init: %v", err)
+		}
+	}
+
+	d := SolidFireDriver{
+		TenantID:       tenantID,
+		Client:         client,
+		Mutex:          &sync.Mutex{},
+		DefaultVolSz:   client.DefaultVolSize,
+		MountPoint:     client.Config.MountPoint,
+		InitiatorIFace: iscsiInterface,
+	}
+	return d
+}
+
 func NewSolidFireDriverFromConfig(c *sfapi.Config) SolidFireDriver {
 	var tenantID int64
 
-	client, _ := sfapi.NewWithArgs(c.EndPoint, c.SVIP, c.TenantName, c.DefaultVolSize)
+	client, _ := sfapi.NewFromConfig("")
 	req := sfapi.GetAccountByNameRequest{
 		Name: c.TenantName,
 	}
@@ -60,8 +124,8 @@ func NewSolidFireDriverFromConfig(c *sfapi.Config) SolidFireDriver {
 	}
 
 	defaultVolSize := int64(1)
-	if c.DefaultVolSize != 0 {
-		defaultVolSize = c.DefaultVolSize
+	if c.DefaultVolSz != 0 {
+		defaultVolSize = c.DefaultVolSz
 	}
 
 	_, err = os.Lstat(baseMountPoint)
@@ -72,7 +136,6 @@ func NewSolidFireDriverFromConfig(c *sfapi.Config) SolidFireDriver {
 	}
 
 	d := SolidFireDriver{
-		TenantName:     c.TenantName,
 		TenantID:       tenantID,
 		Client:         client,
 		Mutex:          &sync.Mutex{},
@@ -111,7 +174,7 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	}
 
 	if r.Options["Type"] != "" {
-		for _, t := range d.Client.VolumeTypes {
+		for _, t := range *d.Client.VolumeTypes {
 			if t.Type == r.Options["Type"] {
 				req.Qos = t.QOS
 			}

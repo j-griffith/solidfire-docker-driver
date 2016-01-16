@@ -187,7 +187,7 @@ func cmdVolumeCreate(c *cli.Context) {
 		qos.BurstIOPS, _ = strconv.ParseInt(iops[2], 10, 64)
 		req.Qos = qos
 	} else if c.String("type") != "" {
-		for _, t := range client.Config.Types {
+		for _, t := range *client.Config.Types {
 			if t.Type == c.String("type") {
 				req.Qos = t.QOS
 			}

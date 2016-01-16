@@ -11,36 +11,62 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type Client struct {
-	MVIP             string
-	SVIP             string
-	Login            string
-	Password         string
-	Endpoint         string
-	DefaultAPIPort   int
-	DefaultVolSize   int64
-	DefaultAccountID int64
-	VolumeTypes      []VolType
-	Config           Config
+	SVIP              string
+	Endpoint          string
+	DefaultAPIPort    int
+	DefaultVolSize    int64 //bytes
+	DefaultAccountID  int64
+	DefaultTenantName string
+	VolumeTypes       *[]VolType
+	Config            *Config
 }
 
 type Config struct {
 	TenantName     string
 	EndPoint       string
-	DefaultVolSize int64 //Default volume size in GiB
+	DefaultVolSz   int64 //Default volume size in GiB
 	MountPoint     string
 	SVIP           string
 	InitiatorIFace string //iface to use of iSCSI initiator
-	Types          []VolType
+	Types          *[]VolType
 }
 
 type VolType struct {
 	Type string
 	QOS  QoS
+}
+
+var (
+	endpoint          string
+	svip              string
+	configFile        string
+	defaultTenantName string
+	defaultSizeGiB    int64
+	cfg               Config
+)
+
+func init() {
+	if os.Getenv("SF_CONFIG_FILE") != "" {
+		conf, _ := ProcessConfig(configFile)
+		cfg = conf
+		endpoint = conf.EndPoint
+		svip = conf.SVIP
+		configFile = os.Getenv("SF_CONFIG_FILE")
+		defaultSizeGiB = conf.DefaultVolSz
+		defaultTenantName = conf.TenantName
+	} else {
+		endpoint = os.Getenv("SF_ENDPOINT")
+		svip = os.Getenv("SF_SVIP")
+		configFile = os.Getenv("SF_CONFIG_FILE")
+		defaultSizeGiB, _ = strconv.ParseInt(os.Getenv("SF_DEFAULT_VSIZE"), 10, 64)
+		defaultTenantName = os.Getenv("SF_DEFAULT_TENANT_NAME")
+	}
 }
 
 func ProcessConfig(fname string) (Config, error) {
@@ -56,24 +82,35 @@ func ProcessConfig(fname string) (Config, error) {
 	return conf, nil
 }
 
-func New() (c *Client, err error) {
-	endpoint := os.Getenv("SF_ENDPOINT")
-	svip := os.Getenv("SF_SVIP")
-	defaultSize := os.Getenv("SF_DEFAULT_SIZE")
-	if endpoint == "" || svip == "" {
-		return &Client{}, nil
+func NewFromConfig(configFile string) (c *Client, err error) {
+	conf, err := ProcessConfig(configFile)
+	if err != nil {
+		log.Fatal("Error initializing client from Config file: ", configFile, "(", err, ")")
 	}
-	defSize, _ := units.ParseStrictBytes(defaultSize)
-	return NewWithArgs(endpoint, svip, "docker", defSize)
+	cfg = conf
+	endpoint = conf.EndPoint
+	svip = conf.SVIP
+	configFile = os.Getenv("SF_CONFIG_FILE")
+	defaultSizeGiB = conf.DefaultVolSz
+	defaultTenantName = conf.TenantName
+	return New()
 }
 
-func NewWithArgs(endpoint, svip, accountName string, defaultSize int64) (client *Client, err error) {
+func New() (c *Client, err error) {
 	rand.Seed(time.Now().UTC().UnixNano())
-	client = &Client{
+	defSize := defaultSizeGiB * int64(units.GiB)
+	SFClient := &Client{
 		Endpoint:       endpoint,
-		DefaultVolSize: defaultSize,
-		SVIP:           svip}
-	return client, nil
+		DefaultVolSize: defSize,
+		SVIP:           svip,
+		Config:         &cfg,
+		DefaultAPIPort: 443,
+		//DefaultAccountID:  defaultAccountID, //TODO(jdg): We can set this as
+		//part of init, but don't provide both config options :(
+		VolumeTypes:       cfg.Types,
+		DefaultTenantName: defaultTenantName,
+	}
+	return SFClient, nil
 }
 
 func (c *Client) Request(method string, params interface{}, id int) (response []byte, err error) {
