@@ -161,7 +161,11 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 		log.Info("Received size request in Create: ", s)
 		vsz = int64(units.GiB) * s
 	} else {
-		vsz = d.DefaultVolSz * int64(units.GiB)
+		// NOTE(jdg): We need to cleanup the conversions and such when we read
+		// in from the config file, it's sort of ugly.  BUT, just remember that
+		// when we pull the value from d.DefaultVolSz it's already been
+		// multiplied
+		vsz = d.DefaultVolSz
 		log.Info("Creating with default size of: ", vsz)
 	}
 
