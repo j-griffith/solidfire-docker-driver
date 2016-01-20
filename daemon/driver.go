@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/alecthomas/units"
 	"os"
@@ -14,7 +15,6 @@ import (
 )
 
 type SolidFireDriver struct {
-	//TenantName     string
 	TenantID       int64
 	DefaultVolSz   int64
 	VagID          int64
@@ -56,10 +56,11 @@ func New(cfgFile string) SolidFireDriver {
 			log.Fatalf("Failed init, unable to create Tenant (%s): %+v", client.DefaultTenantName, err)
 		}
 		tenantID = actID
+		log.Debug("Set tenantID: ", tenantID)
 	} else {
 		tenantID = account.AccountID
+		log.Debug("Set tenantID: ", tenantID)
 	}
-
 	baseMountPoint := "/var/lib/solidfire/mount"
 	if client.Config.MountPoint != "" {
 		baseMountPoint = client.Config.MountPoint
@@ -156,6 +157,17 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	var qos sfapi.QoS
 	var vsz int64
 
+	log.Debugf("GetVolumesByName: %s, %d", r.Name, d.TenantID)
+	vols, err := d.Client.GetVolumesByName(r.Name, d.TenantID)
+	if len(vols) == 1 {
+		log.Infof("Found existing Volume by Name: %s", r.Name)
+		return volume.Response{}
+	} else if len(vols) > 1 {
+		log.Errorf("Found more than one volume with name: %s for account: %d", r.Name, d.TenantID)
+		err := fmt.Errorf("Found more than one volume with name: %s", r.Name)
+		return volume.Response{Err: err.Error()}
+	}
+
 	if r.Options["size"] != "" {
 		s, _ := strconv.ParseInt(r.Options["size"], 10, 64)
 		log.Info("Received size request in Create: ", s)
@@ -188,7 +200,7 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	req.TotalSize = vsz
 	req.AccountID = d.TenantID
 	req.Name = r.Name
-	_, err := d.Client.CreateVolume(&req)
+	_, err = d.Client.CreateVolume(&req)
 	if err != nil {
 		return volume.Response{Err: err.Error()}
 	}

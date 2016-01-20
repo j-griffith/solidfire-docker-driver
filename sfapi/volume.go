@@ -3,9 +3,65 @@ package sfapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"strings"
 )
+
+func (c *Client) ListVolumesForAccount(listReq *ListVolumesForAccountRequest) (volumes []Volume, err error) {
+	response, err := c.Request("ListVolumesForAccount", listReq, newReqID())
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	var result ListVolumesResult
+	if err := json.Unmarshal([]byte(response), &result); err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	volumes = result.Result.Volumes
+	return volumes, err
+}
+
+func (c *Client) GetVolumeByID(volID, acctID int64) (v Volume, err error) {
+	var listReq ListVolumesForAccountRequest
+	listReq.AccountID = acctID
+	volumes, err := c.ListVolumesForAccount(&listReq)
+	if err != nil {
+		log.Error("Error retrieving volumes: ", err)
+		return Volume{}, err
+	}
+	for _, vol := range volumes {
+		if vol.VolumeID == volID {
+			return vol, nil
+		}
+	}
+	return Volume{}, fmt.Errorf("Failed to find volume with ID: %d", volID)
+
+}
+
+func (c *Client) GetVolumesByName(sfName string, acctID int64) (v []Volume, err error) {
+	var listReq ListVolumesForAccountRequest
+	var foundVolumes []Volume
+	listReq.AccountID = acctID
+	volumes, err := c.ListVolumesForAccount(&listReq)
+	if err != nil {
+		log.Error("Error retrieving volumes: ", err)
+		return foundVolumes, err
+	}
+	for _, vol := range volumes {
+		if vol.Name == sfName && vol.Status == "active" {
+			foundVolumes = append(foundVolumes, vol)
+		}
+	}
+	if len(foundVolumes) > 1 {
+		log.Warningf("Found more than one volume with the name: %s\n%+v", sfName, foundVolumes)
+	}
+	if len(foundVolumes) == 0 {
+		return foundVolumes, fmt.Errorf("Failed to find any volumes by the name of: %s for this account: %d", sfName, acctID)
+	}
+	return foundVolumes, nil
+}
 
 func (c *Client) ListActiveVolumes(listVolReq *ListActiveVolumesRequest) (volumes []Volume, err error) {
 	response, err := c.Request("ListActiveVolumes", listVolReq, newReqID())
@@ -65,7 +121,7 @@ func (c *Client) CreateVolume(createReq *CreateVolumeRequest) (vol Volume, err e
 		return Volume{}, err
 	}
 
-	vol, err = c.GetVolume(result.Result.VolumeID, "")
+	vol, err = c.GetVolumeByID(result.Result.VolumeID, createReq.AccountID)
 	return
 }
 

@@ -59,6 +59,10 @@ type Snapshot struct {
 	Attributes interface{} `json:"attributes"`
 }
 
+type ListVolumesForAccountRequest struct {
+	AccountID int64 `json:"accountID"`
+}
+
 type ListActiveVolumesRequest struct {
 	StartVolumeID int64 `json:"startVolumeID"`
 	Limit         int64 `json:"limit"`

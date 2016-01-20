@@ -89,8 +89,8 @@ func iscsiDisableDelete(tgt *ISCSITarget) (err error) {
 	log.Debugf("Begin utils.iscsiDisableDelete: %v", tgt)
 	_, err = exec.Command("sudo", "iscsiadm", "-m", "node", "-T", tgt.Iqn, "--portal", tgt.Ip, "-u").CombinedOutput()
 	if err != nil {
-		log.Error("Error during iscsi logout: ", err)
-		return
+		log.Debugf("Error during iscsi logout: ", err)
+		//return
 	}
 	_, err = exec.Command("sudo", "iscsiadm", "-m", "node", "-o", "delete", "-T", tgt.Iqn).CombinedOutput()
 	return
