@@ -66,8 +66,25 @@ var (
 	}
 
 	volumeListCmd = cli.Command{
-		Name:   "list",
-		Usage:  "list existing volumes: `list`",
+		Name:  "list",
+		Usage: "list existing volumes: `list`",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "startID, s",
+				Value: "",
+				Usage: ": list a range of volume ID's `[--startid <startID>]`",
+			},
+			cli.StringFlag{
+				Name:  "limit, l",
+				Value: "",
+				Usage: ": limit the number of volumes returned to `[--limit <limit>]`",
+			},
+			cli.StringFlag{
+				Name:  "account, a",
+				Value: "",
+				Usage: ": only retrieve volumes for the specified accountID `[--account <accountID>]` (not compatible with other options)",
+			},
+		},
 		Action: cmdVolumeList,
 	}
 
@@ -243,9 +260,36 @@ func cmdVolumeDelete(c *cli.Context) {
 	}
 }
 
+func listForAccount(acctID int64) (vols []sfapi.Volume, err error) {
+	var req sfapi.ListVolumesForAccountRequest
+	req.AccountID = acctID
+	return client.ListVolumesForAccount(&req)
+}
+
+func listActiveVolumes(req sfapi.ListActiveVolumesRequest) (vols []sfapi.Volume, err error) {
+	return client.ListActiveVolumes(&req)
+}
+
 func cmdVolumeList(c *cli.Context) {
 	var req sfapi.ListActiveVolumesRequest
-	volumes, err := client.ListActiveVolumes(&req)
+	var volumes []sfapi.Volume
+	var err error
+
+	if c.String("account") != "" {
+		acctID, _ := strconv.ParseInt(c.String("account"), 10, 64)
+		volumes, err = listForAccount(acctID)
+	} else {
+		if c.String("startID") != "" {
+			stID, _ := strconv.ParseInt(c.String("startID"), 10, 64)
+			req.StartVolumeID = stID
+		}
+		if c.String("limit") != "" {
+			limit, _ := strconv.ParseInt(c.String("limit"), 10, 64)
+			req.Limit = limit
+		}
+		volumes, err = client.ListActiveVolumes(&req)
+	}
+
 	if err != nil {
 		fmt.Println(err)
 	} else {
