@@ -5,7 +5,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/j-griffith/solidfire-docker-driver/sfapi"
-	//	"os"
 	"strings"
 	"unicode/utf8"
 )
@@ -129,7 +128,7 @@ func NewCli(version string) *cli.App {
 func initClient(c *cli.Context) error {
 	cfgFile := c.GlobalString("config")
 	if cfgFile != "" {
-		client, _ := sfapi.NewFromConfig(cfgFile)
+		client, _ = sfapi.NewFromConfig(cfgFile)
 		conf, _ := sfapi.ProcessConfig(cfgFile)
 		client.Config = &conf
 	} else {

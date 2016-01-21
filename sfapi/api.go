@@ -100,13 +100,11 @@ func New() (c *Client, err error) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	defSize := defaultSizeGiB * int64(units.GiB)
 	SFClient := &Client{
-		Endpoint:       endpoint,
-		DefaultVolSize: defSize,
-		SVIP:           svip,
-		Config:         &cfg,
-		DefaultAPIPort: 443,
-		//DefaultAccountID:  defaultAccountID, //TODO(jdg): We can set this as
-		//part of init, but don't provide both config options :(
+		Endpoint:          endpoint,
+		DefaultVolSize:    defSize,
+		SVIP:              svip,
+		Config:            &cfg,
+		DefaultAPIPort:    443,
 		VolumeTypes:       cfg.Types,
 		DefaultTenantName: defaultTenantName,
 	}
