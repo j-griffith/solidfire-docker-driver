@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/alecthomas/units"
 	"os"
@@ -157,15 +156,11 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	var qos sfapi.QoS
 	var vsz int64
 
-	log.Debugf("GetVolumesByName: %s, %d", r.Name, d.TenantID)
-	vols, err := d.Client.GetVolumesByName(r.Name, d.TenantID)
-	if len(vols) == 1 {
+	log.Debugf("GetVolumeByName: %s, %d", r.Name, d.TenantID)
+	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
+	if err == nil && v.VolumeID != 0 {
 		log.Infof("Found existing Volume by Name: %s", r.Name)
 		return volume.Response{}
-	} else if len(vols) > 1 {
-		log.Errorf("Found more than one volume with name: %s for account: %d", r.Name, d.TenantID)
-		err := fmt.Errorf("Found more than one volume with name: %s", r.Name)
-		return volume.Response{Err: err.Error()}
 	}
 
 	if r.Options["size"] != "" {
@@ -209,7 +204,7 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 
 func (d SolidFireDriver) Remove(r volume.Request) volume.Response {
 	log.Info("Remove/Delete Volume: ", r.Name)
-	v, err := d.Client.GetVolume(0, r.Name)
+	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
 	if err != nil {
 		log.Error("Failed to retrieve volume named ", r.Name, "during Remove operation: ", err)
 		return volume.Response{Err: err.Error()}
@@ -234,7 +229,7 @@ func (d SolidFireDriver) Mount(r volume.Request) volume.Response {
 	d.Mutex.Lock()
 	defer d.Mutex.Unlock()
 	log.Infof("Mounting volume %s on %s\n", r.Name, "solidfire")
-	v, err := d.Client.GetVolume(0, r.Name)
+	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
 	if err != nil {
 		log.Errorf("Failed to retrieve volume by name in mount operation: ", r.Name)
 		return volume.Response{Err: err.Error()}
@@ -269,7 +264,7 @@ func (d SolidFireDriver) Mount(r volume.Request) volume.Response {
 func (d SolidFireDriver) Unmount(r volume.Request) volume.Response {
 	log.Info("Unmounting volume: ", r.Name)
 	sfapi.Umount(filepath.Join(d.MountPoint, r.Name))
-	v, err := d.Client.GetVolume(0, r.Name)
+	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
 	if err != nil {
 		return volume.Response{Err: err.Error()}
 	}

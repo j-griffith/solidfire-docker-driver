@@ -23,21 +23,32 @@ func (c *Client) ListVolumesForAccount(listReq *ListVolumesForAccountRequest) (v
 	return volumes, err
 }
 
-func (c *Client) GetVolumeByID(volID, acctID int64) (v Volume, err error) {
-	var listReq ListVolumesForAccountRequest
-	listReq.AccountID = acctID
-	volumes, err := c.ListVolumesForAccount(&listReq)
+func (c *Client) GetVolumeByID(volID int64) (v Volume, err error) {
+	var req ListActiveVolumesRequest
+	req.StartVolumeID = volID
+	req.Limit = 1
+	volumes, err := c.ListActiveVolumes(&req)
 	if err != nil {
-		log.Error("Error retrieving volumes: ", err)
-		return Volume{}, err
+		return v, err
 	}
-	for _, vol := range volumes {
-		if vol.VolumeID == volID {
-			return vol, nil
-		}
+	if len(volumes) < 1 {
+		return Volume{}, fmt.Errorf("Failed to find volume with ID: %d", volID)
 	}
-	return Volume{}, fmt.Errorf("Failed to find volume with ID: %d", volID)
+	return volumes[0], nil
+}
 
+func (c *Client) GetVolumeByName(n string, acctID int64) (v Volume, err error) {
+	vols, err := c.GetVolumesByName(n, acctID)
+	if err == nil && len(vols) == 1 {
+		return vols[0], nil
+	}
+
+	if len(vols) > 1 {
+		err = fmt.Errorf("Found more than one Volume with Name: %s for Account: %d", n, acctID)
+	} else if len(vols) < 1 {
+		err = fmt.Errorf("Failed to find any Volumes with Name: %s for Account: %d", n, acctID)
+	}
+	return v, err
 }
 
 func (c *Client) GetVolumesByName(sfName string, acctID int64) (v []Volume, err error) {
@@ -78,27 +89,6 @@ func (c *Client) ListActiveVolumes(listVolReq *ListActiveVolumesRequest) (volume
 	return volumes, err
 }
 
-func (c *Client) GetVolume(sfID int64, sfName string) (v Volume, err error) {
-	var listReq ListActiveVolumesRequest
-	volumes, err := c.ListActiveVolumes(&listReq)
-	if err != nil {
-		log.Error("Error retrieving volumes: ", err)
-		return Volume{}, err
-	}
-	for _, vol := range volumes {
-		if sfID == vol.VolumeID {
-			log.Debugf("Found volume by ID: %v", vol)
-			v = vol
-			break
-		} else if sfName != "" && sfName == vol.Name {
-			log.Debugf("Found volume by Name: %v", vol)
-			v = vol
-			break
-		}
-	}
-	return v, err
-}
-
 func (c *Client) CloneVolume(req *CloneVolumeRequest) (vol Volume, err error) {
 	response, err := c.Request("CloneVolume", req, newReqID())
 	var result CloneVolumeResult
@@ -106,7 +96,7 @@ func (c *Client) CloneVolume(req *CloneVolumeRequest) (vol Volume, err error) {
 		log.Fatal(err)
 		return Volume{}, err
 	}
-	vol, err = c.GetVolume(result.Result.VolumeID, "")
+	vol, err = c.GetVolumeByID(result.Result.VolumeID)
 	return
 }
 
@@ -121,7 +111,7 @@ func (c *Client) CreateVolume(createReq *CreateVolumeRequest) (vol Volume, err e
 		return Volume{}, err
 	}
 
-	vol, err = c.GetVolumeByID(result.Result.VolumeID, createReq.AccountID)
+	vol, err = c.GetVolumeByID(result.Result.VolumeID)
 	return
 }
 
