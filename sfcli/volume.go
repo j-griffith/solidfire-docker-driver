@@ -23,8 +23,10 @@ var (
 			volumeAttachCmd,
 			volumeDetachCmd,
 			volumeAddToVag,
+			volumeRollbackCmd,
 		},
 	}
+
 	volumeCreateCmd = cli.Command{
 		Name:  "create",
 		Usage: "create a new volume: `create [options] NAME`",
@@ -52,11 +54,19 @@ var (
 		},
 		Action: cmdVolumeCreate,
 	}
+
 	volumeCloneCmd = cli.Command{
 		Name:   "clone",
 		Usage:  "create a clone of an existing volume: `clone [options] EXISTING_VOLID NAME`",
 		Action: cmdVolumeClone,
 	}
+
+	volumeRollbackCmd = cli.Command{
+		Name:   "rollback",
+		Usage:  "rollback a volume to a previously taken snapshot `rollback [options] VOLUME_ID SNAPSHOT_ID`",
+		Action: cmdVolumeRollback,
+	}
+
 	volumeDeleteCmd = cli.Command{
 		Name:  "delete",
 		Usage: "delete an existing volume: `delete VOLUME-ID`",
@@ -173,6 +183,19 @@ func cmdVolumeAddToVag(c *cli.Context) {
 		return
 	}
 	fmt.Printf("Succesfully added volume to VAG ID: %d\n", vagID)
+}
+
+func cmdVolumeRollback(c *cli.Context) {
+	var req sfapi.RollbackToSnapshotRequest
+	vid, _ := strconv.ParseInt(c.Args().First(), 10, 64)
+	sid, _ := strconv.ParseInt(c.Args()[1], 10, 64)
+
+	req.VolumeID = vid
+	req.SnapshotID = sid
+	_, err := client.RollbackToSnapshot(&req)
+	if err != nil {
+		fmt.Errorf("failed rollback to snapshot: %+v\n", err)
+	}
 }
 
 func cmdVolumeClone(c *cli.Context) {

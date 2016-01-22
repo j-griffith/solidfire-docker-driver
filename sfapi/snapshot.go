@@ -50,7 +50,7 @@ func (c *Client) ListSnapshots(req *ListSnapshotsRequest) (snapshots []Snapshot,
 }
 
 func (c *Client) RollbackToSnapshot(req *RollbackToSnapshotRequest) (newSnapID int64, err error) {
-	response, err := c.Request("ListSnapshots", req, newReqID())
+	response, err := c.Request("RollbackToSnapshot", req, newReqID())
 	if err != nil {
 		log.Error(err)
 		return 0, err
