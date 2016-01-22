@@ -16,8 +16,6 @@ func Start(cfgFile string, debug bool) {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
-	//cfg, _ := sfapi.ProcessConfig(cfgFile)
-	//d := NewSolidFireDriverFromConfig(cfgFile)
 	d := New(cfgFile)
 	h := volume.NewHandler(d)
 	log.Info(h.ServeUnix("root", "solidfire"))
