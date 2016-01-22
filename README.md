@@ -21,7 +21,7 @@ Containers that you migrate from one Docker host to another.
   Standard Docker plugin model, we've moved away from using the Gorilla libs in
   favor of leveraging the excellent go-plugins-helpers packages instead.  More
   information can be found on it's github page here
-  [go-plugins-helpers/volume]: https://github.com/docker/go-plugins-helpers/volume
+  [go-plugins-helpers/volume](https://github.com/docker/go-plugins-helpers/volume)
 
   The Daemon simply accepts json requests that are routed from Docker to the
   SolidFire Driver which then routes the request to the appropriate SolidFire
@@ -58,7 +58,7 @@ Docker host node!
 To install the latest Golang, just follow the easy steps on the Go install
 websiste.  Again, I prefer to download the tarball and install myself rather
 than use a package manager like apt or yum:
-[installgo]: https://golang.org/doc/install "Install Go"
+[Get Go](https://golang.org/doc/install)
 
 NOTE:
 It's very important that you follow the directions and setup your Go
@@ -70,7 +70,7 @@ environment as per the instructions.
 As far as Docker install, again I prefer using wget and pulling the latest version
 from get.docker.com.  You can find instructions and steps on the Docker website
 here:
-[docker]: https://docs.docker.com/linux/step_one/  "Install Latest Docker"
+[Get Docker](https://docs.docker.com/linux/step_one/)
 
 ### Open iSCSI
 This driver uses iSCSI SolidFire storage devices, and makes iSCSI connections
