@@ -6,6 +6,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"strings"
+	"time"
 )
 
 func (c *Client) ListVolumesForAccount(listReq *ListVolumesForAccountRequest) (volumes []Volume, err error) {
@@ -96,7 +97,18 @@ func (c *Client) CloneVolume(req *CloneVolumeRequest) (vol Volume, err error) {
 		log.Fatal(err)
 		return Volume{}, err
 	}
-	vol, err = c.GetVolumeByID(result.Result.VolumeID)
+
+	wait := 0
+	multiplier := 1
+	for wait < 10 {
+		wait += wait
+		vol, err = c.GetVolumeByID(result.Result.VolumeID)
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second * time.Duration(multiplier))
+		multiplier *= wait
+	}
 	return
 }
 

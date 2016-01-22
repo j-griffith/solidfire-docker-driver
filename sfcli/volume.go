@@ -17,6 +17,7 @@ var (
 		Usage: "volume related commands",
 		Subcommands: []cli.Command{
 			volumeCreateCmd,
+			volumeCloneCmd,
 			volumeDeleteCmd,
 			volumeListCmd,
 			volumeAttachCmd,
@@ -51,7 +52,11 @@ var (
 		},
 		Action: cmdVolumeCreate,
 	}
-
+	volumeCloneCmd = cli.Command{
+		Name:   "clone",
+		Usage:  "create a clone of an existing volume: `clone [options] EXISTING_VOLID NAME`",
+		Action: cmdVolumeClone,
+	}
 	volumeDeleteCmd = cli.Command{
 		Name:  "delete",
 		Usage: "delete an existing volume: `delete VOLUME-ID`",
@@ -168,6 +173,31 @@ func cmdVolumeAddToVag(c *cli.Context) {
 		return
 	}
 	fmt.Printf("Succesfully added volume to VAG ID: %d\n", vagID)
+}
+
+func cmdVolumeClone(c *cli.Context) {
+	var req sfapi.CloneVolumeRequest
+	id, _ := strconv.ParseInt(c.Args().First(), 10, 64)
+	name := c.Args()[1]
+	if id == 0 || name == "" {
+		fmt.Printf("Error, missing arguments to clone cmd")
+		return
+	}
+	req.VolumeID = id
+	req.Name = name
+	v, err := client.CloneVolume(&req)
+	if err != nil {
+		fmt.Println("Error cloning volume: ", err)
+	}
+	fmt.Println("-------------------------------------------")
+	fmt.Println("Succesfully Cloned Volume:")
+	fmt.Println("-------------------------------------------")
+	fmt.Println("ID:         ", v.VolumeID)
+	fmt.Println("Name:       ", v.Name)
+	fmt.Println("Size (GiB): ", v.TotalSize/int64(units.GiB))
+	fmt.Println("QoS :       ", "minIOPS:", v.Qos.MinIOPS, "maxIOPS:", v.Qos.MaxIOPS, "burstIOPS:", v.Qos.BurstIOPS)
+	fmt.Println("Account:    ", v.AccountID)
+	fmt.Println("-------------------------------------------")
 }
 
 func cmdVolumeCreate(c *cli.Context) {
