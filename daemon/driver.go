@@ -271,3 +271,34 @@ func (d SolidFireDriver) Unmount(r volume.Request) volume.Response {
 	d.Client.DetachVolume(v)
 	return volume.Response{}
 }
+
+func (d SolidFireDriver) Get(r volume.Request) volume.Response {
+	log.Info("Get volume: ", r.Name)
+	path := filepath.Join(d.MountPoint, r.Name)
+	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
+	if err != nil {
+		log.Error("Failed to retrieve volume named ", r.Name, "during Get operation: ", err)
+		return volume.Response{Err: err.Error()}
+	}
+	return volume.Response{Volume: &volume.Volume{Name: v.Name, Mountpoint: path}}
+}
+
+func (d SolidFireDriver) List(r volume.Request) volume.Response {
+	log.Info("Get volume: ", r.Name)
+	path := filepath.Join(d.MountPoint, r.Name)
+	var vols []*volume.Volume
+	var req sfapi.ListVolumesForAccountRequest
+	req.AccountID = d.TenantID
+	vlist, err := d.Client.ListVolumesForAccount(&req)
+	if err != nil {
+		log.Error("Failed to retrieve volume list:", err)
+		return volume.Response{Err: err.Error()}
+	}
+
+	for _, v := range vlist {
+		if v.Status == "Active" && v.AccountID == d.TenantID {
+			vols = append(vols, &volume.Volume{Name: v.Name, Mountpoint: path})
+		}
+	}
+	return volume.Response{Volumes: vols}
+}
