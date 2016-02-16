@@ -112,6 +112,7 @@ func New() (c *Client, err error) {
 }
 
 func (c *Client) Request(method string, params interface{}, id int) (response []byte, err error) {
+	log.Debug("Issue request to SolidFire Endpoint...")
 	if c.Endpoint == "" {
 		log.Error("Endpoint is not set, unable to issue requests")
 		err = errors.New("Unable to issue json-rpc requests without specifying Endpoint")
@@ -127,11 +128,13 @@ func (c *Client) Request(method string, params interface{}, id int) (response []
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
+	log.Debugf("POST request to: %+v", c.Endpoint)
 	Http := &http.Client{Transport: tr}
 	resp, err := Http.Post(c.Endpoint,
 		"json-rpc",
 		strings.NewReader(string(data)))
 	if err != nil {
+		log.Errorf("Error encountered posting request: %v", err)
 		return nil, err
 	}
 
