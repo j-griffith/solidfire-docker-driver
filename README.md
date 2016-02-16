@@ -183,7 +183,8 @@ API:
 You can also specify options, like specifying the QoS via the Types you've set
 in the config file:
   ```
-  docker volume create -d solidfire --name=testvolume --opt=Type:Gold
+  docker volume create -d solidfire --name=testvolume -o type=Gold
+  -o size=10
   ```
 
 Now in order to use that volume with a Container you simply specify

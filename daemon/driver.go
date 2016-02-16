@@ -148,6 +148,22 @@ func NewSolidFireDriverFromConfig(c *sfapi.Config) SolidFireDriver {
 	return d
 }
 
+func formatOpts(r volume.Request) {
+	// NOTE(jdg): For now we just want to minimize issues like case usage for
+	// the two basic opts most used (size and type).  Going forward we can add
+	// all sorts of things here based on what we decide to add as valid opts
+	// during create and even other calls
+	for k, v := range r.Options{
+		if strings.EqualFold(k, "size"){
+			r.Options["size"] = v
+		} else if strings.EqualFold(k, "type") {
+			r.Options["type"] = v
+		} else if strings.EqualFold(k, "qos") {
+			r.Options["qos"] = v
+		}
+	}
+}
+
 func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	log.Infof("Create volume %s on %s\n", r.Name, "solidfire")
 	d.Mutex.Lock()
@@ -157,12 +173,14 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	var vsz int64
 
 	log.Debugf("GetVolumeByName: %s, %d", r.Name, d.TenantID)
+	log.Debugf("Options passed in to create: %+v", r.Options)
 	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
 	if err == nil && v.VolumeID != 0 {
 		log.Infof("Found existing Volume by Name: %s", r.Name)
 		return volume.Response{}
 	}
-
+	formatOpts(r)
+	log.Debugf("Options after conversion: %+v", r.Options)
 	if r.Options["size"] != "" {
 		s, _ := strconv.ParseInt(r.Options["size"], 10, 64)
 		log.Info("Received size request in Create: ", s)
@@ -182,12 +200,15 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 		qos.MaxIOPS, _ = strconv.ParseInt(iops[1], 10, 64)
 		qos.BurstIOPS, _ = strconv.ParseInt(iops[2], 10, 64)
 		req.Qos = qos
+		log.Infof("Received qos r.Options in Create: %+v", req.Qos)
 	}
 
-	if r.Options["Type"] != "" {
+	if r.Options["type"] != "" {
 		for _, t := range *d.Client.VolumeTypes {
-			if t.Type == r.Options["Type"] {
-				req.Qos = t.QOS
+            if strings.EqualFold(t.Type, r.Options["type"]) {
+                req.Qos = t.QOS
+                log.Infof("Received Type r.Options in Create and set QoS: %+v", req.Qos)
+				break
 			}
 		}
 	}
