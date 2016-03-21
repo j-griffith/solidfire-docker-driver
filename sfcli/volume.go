@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/units"
 	"github.com/codegangsta/cli"
-	"github.com/j-griffith/solidfire-docker-driver/sfapi"
+	"github.com/solidfire/solidfire-docker-driver/sfapi"
 	"strconv"
 	"strings"
 )
