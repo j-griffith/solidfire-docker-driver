@@ -91,7 +91,7 @@ ISCSI packages installed on each Docker node.
 ## Driver Installation
 After the aboe Prerequisites are met, Use the standard golang install process:
   ```
-  go get -u github.com/solidfire/solidfire-docker-driver
+  go get -u github.com/j-griffith/solidfire-docker-driver
   ```
 
 ** Note a future version of the Driver will likely reside on the official

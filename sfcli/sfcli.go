@@ -4,7 +4,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-	"github.com/solidfire/solidfire-docker-driver/sfapi"
+	"github.com/j-griffith/solidfire-docker-driver/sfapi"
 	"strings"
 	"unicode/utf8"
 )

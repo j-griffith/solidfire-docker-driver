@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/docker/go-plugins-helpers/volume"
-	"github.com/solidfire/solidfire-docker-driver/sfapi"
+	"github.com/j-griffith/solidfire-docker-driver/sfapi"
 )
 
 type SolidFireDriver struct {
