@@ -3,7 +3,7 @@ package sfcli
 import (
 	"fmt"
 	"github.com/alecthomas/units"
-	"github.com/j-griffith/solidfire-docker-driver/sfapi"
+	"github.com/solidfire/solidfire-docker-driver/sfapi"
 	"os"
 	"reflect"
 	"strconv"

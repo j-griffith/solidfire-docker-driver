@@ -2,7 +2,7 @@ package sfcli
 
 import (
 	"github.com/codegangsta/cli"
-	"github.com/j-griffith/solidfire-docker-driver/daemon"
+	"github.com/solidfire/solidfire-docker-driver/daemon"
 )
 
 var (
