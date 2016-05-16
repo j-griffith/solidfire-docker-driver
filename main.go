@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/j-griffith/solidfire-docker-driver/sfapi"
-	"github.com/j-griffith/solidfire-docker-driver/sfcli"
+	"github.com/solidfire/solidfire-docker-driver/sfapi"
+	"github.com/solidfire/solidfire-docker-driver/sfcli"
 	"os"
 )
 
