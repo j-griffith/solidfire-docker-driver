@@ -153,8 +153,8 @@ func formatOpts(r volume.Request) {
 	// the two basic opts most used (size and type).  Going forward we can add
 	// all sorts of things here based on what we decide to add as valid opts
 	// during create and even other calls
-	for k, v := range r.Options{
-		if strings.EqualFold(k, "size"){
+	for k, v := range r.Options {
+		if strings.EqualFold(k, "size") {
 			r.Options["size"] = v
 		} else if strings.EqualFold(k, "type") {
 			r.Options["type"] = v
@@ -205,9 +205,9 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 
 	if r.Options["type"] != "" {
 		for _, t := range *d.Client.VolumeTypes {
-            if strings.EqualFold(t.Type, r.Options["type"]) {
-                req.Qos = t.QOS
-                log.Infof("Received Type r.Options in Create and set QoS: %+v", req.Qos)
+			if strings.EqualFold(t.Type, r.Options["type"]) {
+				req.Qos = t.QOS
+				log.Infof("Received Type r.Options in Create and set QoS: %+v", req.Qos)
 				break
 			}
 		}
@@ -322,4 +322,8 @@ func (d SolidFireDriver) List(r volume.Request) volume.Response {
 		}
 	}
 	return volume.Response{Volumes: vols}
+}
+
+func (d SolidFireDriver) Capabilities(r volume.Request) volume.Response {
+	return volume.Response{Capabilities: volume.Capability{Scope: "global"}}
 }
