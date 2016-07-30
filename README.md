@@ -102,7 +102,6 @@ sudo chown root:root /usr/local/bin/solidfire-docker-driver
   go get -u github.com/solidfire/solidfire-docker-driver
   ```
 
-** Note a future version of the Driver will likely reside on the official
 ** There are known issues with docker/go-plugins-helpers not building against the latest Docker version.  You can view the Issue on GitHub here:  https://github.com/docker/go-plugins-helpers/issues/46
 
 SolidFire Github page [SolidFire Github](https://github.com/solidfire)
