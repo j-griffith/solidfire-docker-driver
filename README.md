@@ -166,8 +166,7 @@ not be added in the future.
 
 ## Starting the daemon
 After install and setting up a configuration, all you need to is start the
-solidfire-docker-driver daemon so tha it can accept requests from Docker.
-
+solidfire-docker-driver daemon so that it can accept requests from Docker.
   ```
   sudo solidfire-docker-driver daemon start -v
   ```
