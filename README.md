@@ -168,8 +168,6 @@ not be added in the future.
 After install and setting up a configuration, all you need to is start the
 solidfire-docker-driver daemon so tha it can accept requests from Docker.
 
-Note that if
-
   ```
   sudo solidfire-docker-driver daemon start -v
   ```
