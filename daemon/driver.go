@@ -171,6 +171,7 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	var req sfapi.CreateVolumeRequest
 	var qos sfapi.QoS
 	var vsz int64
+	var meta = map[string]string{"platform": "Docker-SFVP"}
 
 	log.Debugf("GetVolumeByName: %s, %d", r.Name, d.TenantID)
 	log.Debugf("Options passed in to create: %+v", r.Options)
@@ -216,6 +217,7 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	req.TotalSize = vsz
 	req.AccountID = d.TenantID
 	req.Name = r.Name
+	req.Attributes = meta
 	_, err = d.Client.CreateVolume(&req)
 	if err != nil {
 		return volume.Response{Err: err.Error()}
@@ -322,4 +324,8 @@ func (d SolidFireDriver) List(r volume.Request) volume.Response {
 		}
 	}
 	return volume.Response{Volumes: vols}
+}
+
+func (d SolidFireDriver) Capabilities(r volume.Request) volume.Response {
+	return volume.Response{Capabilities: volume.Capability{Scope: "global"}}
 }

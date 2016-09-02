@@ -89,12 +89,21 @@ ISCSI packages installed on each Docker node.
   ```
 
 ## Driver Installation
-After the aboe Prerequisites are met, Use the standard golang install process:
+### Download the linux binary from Github Release
+```
+wget https://github.com/solidfire/solidfire-docker-driver/releases/download/v1.1/solidfire-docker-driver
+
+# move to a location in the bin path
+sudo mv solidfire-docker-driver /usr/local/bin
+sudo chown root:root /usr/local/bin/solidfire-docker-driver
+```
+### Build from source yourself
   ```
   go get -u github.com/solidfire/solidfire-docker-driver
   ```
 
-** Note a future version of the Driver will likely reside on the official
+** There are known issues with docker/go-plugins-helpers not building against the latest Docker version.  You can view the Issue on GitHub here:  https://github.com/docker/go-plugins-helpers/issues/46
+
 SolidFire Github page [SolidFire Github](https://github.com/solidfire)
 
 This will give you the source in your golang/src
@@ -157,10 +166,7 @@ not be added in the future.
 
 ## Starting the daemon
 After install and setting up a configuration, all you need to is start the
-solidfire-docker-driver daemon so tha it can accept requests from Docker.
-
-Note that if
-
+solidfire-docker-driver daemon so that it can accept requests from Docker.
   ```
   sudo solidfire-docker-driver daemon start -v
   ```
