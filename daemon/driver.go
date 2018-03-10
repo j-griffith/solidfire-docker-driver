@@ -10,7 +10,8 @@ import (
 	"sync"
 
 	"github.com/docker/go-plugins-helpers/volume"
-	"github.com/solidfire/solidfire-docker-driver/sfapi"
+	"github.com/j-griffith/sfgo/pkg/provider"
+	sfc "github.com/j-griffith/sfgo/pkg/client"
 )
 
 type SolidFireDriver struct {
@@ -40,6 +41,8 @@ func verifyConfiguration(cfg *sfapi.Config) {
 }
 func New(cfgFile string) SolidFireDriver {
 	var tenantID int64
+	// sfc.InitClient("/var/lib/config")
+	// sfc.GetSolidFireClient()
 	client, _ := sfapi.NewFromConfig(cfgFile)
 
 	req := sfapi.GetAccountByNameRequest{
@@ -148,7 +151,7 @@ func NewSolidFireDriverFromConfig(c *sfapi.Config) SolidFireDriver {
 	return d
 }
 
-func formatOpts(r volume.Request) {
+func formatOpts(r *volume.CreateRequest) {
 	// NOTE(jdg): For now we just want to minimize issues like case usage for
 	// the two basic opts most used (size and type).  Going forward we can add
 	// all sorts of things here based on what we decide to add as valid opts
@@ -164,7 +167,7 @@ func formatOpts(r volume.Request) {
 	}
 }
 
-func (d SolidFireDriver) Create(r volume.Request) volume.Response {
+func (d SolidFireDriver) Create(r *volume.CreateRequest) error {
 	log.Infof("Create volume %s on %s\n", r.Name, "solidfire")
 	d.Mutex.Lock()
 	defer d.Mutex.Unlock()
@@ -177,7 +180,7 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
 	if err == nil && v.VolumeID != 0 {
 		log.Infof("Found existing Volume by Name: %s", r.Name)
-		return volume.Response{}
+		return err
 	}
 	formatOpts(r)
 	log.Debugf("Options after conversion: %+v", r.Options)
@@ -218,17 +221,17 @@ func (d SolidFireDriver) Create(r volume.Request) volume.Response {
 	req.Name = r.Name
 	_, err = d.Client.CreateVolume(&req)
 	if err != nil {
-		return volume.Response{Err: err.Error()}
+		return err
 	}
-	return volume.Response{}
+	return  nil
 }
 
-func (d SolidFireDriver) Remove(r volume.Request) volume.Response {
+func (d SolidFireDriver) Remove(r *volume.RemoveRequest) error {
 	log.Info("Remove/Delete Volume: ", r.Name)
 	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
 	if err != nil {
 		log.Error("Failed to retrieve volume named ", r.Name, "during Remove operation: ", err)
-		return volume.Response{Err: err.Error()}
+		return err
 	}
 	d.Client.DetachVolume(v)
 	err = d.Client.DeleteVolume(v.VolumeID)
@@ -236,35 +239,35 @@ func (d SolidFireDriver) Remove(r volume.Request) volume.Response {
 		// FIXME(jdg): Check if it's a "DNE" error in that case we're golden
 		log.Error("Error encountered during delete: ", err)
 	}
-	return volume.Response{}
+	return nil
 }
 
-func (d SolidFireDriver) Path(r volume.Request) volume.Response {
+func (d SolidFireDriver) Path(r *volume.PathRequest) (*volume.PathResponse, error) {
 	log.Info("Retrieve path info for volume: ", r.Name)
 	path := filepath.Join(d.MountPoint, r.Name)
 	log.Debug("Path reported as: ", path)
-	return volume.Response{Mountpoint: path}
+	return &volume.PathResponse{Mountpoint: path}, nil
 }
 
-func (d SolidFireDriver) Mount(r volume.Request) volume.Response {
+func (d SolidFireDriver) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	d.Mutex.Lock()
 	defer d.Mutex.Unlock()
 	log.Infof("Mounting volume %s on %s\n", r.Name, "solidfire")
 	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
 	if err != nil {
 		log.Errorf("Failed to retrieve volume by name in mount operation: ", r.Name)
-		return volume.Response{Err: err.Error()}
+		return &volume.MountResponse{}, err
 	}
 	path, device, err := d.Client.AttachVolume(&v, d.InitiatorIFace)
 	if path == "" || device == "" && err == nil {
 		log.Error("Missing path or device, but err not set?")
 		log.Debug("Path: ", path, ",Device: ", device)
-		return volume.Response{Err: err.Error()}
+		return &volume.MountResponse{}, err
 
 	}
 	if err != nil {
 		log.Errorf("Failed to perform iscsi attach of volume %s: %v", r.Name, err)
-		return volume.Response{Err: err.Error()}
+		return &volume.MountResponse{}, err
 	}
 	log.Debugf("Attached volume at (path, devfile): %s, %s", path, device)
 	if sfapi.GetFSType(device) == "" {
@@ -272,54 +275,54 @@ func (d SolidFireDriver) Mount(r volume.Request) volume.Response {
 		err := sfapi.FormatVolume(device, "ext4")
 		if err != nil {
 			log.Errorf("Failed to format device: ", device)
-			return volume.Response{Err: err.Error()}
+		    return &volume.MountResponse{}, err
 		}
 	}
 	if sfapi.Mount(device, d.MountPoint+"/"+r.Name) != nil {
 		log.Error("Failed to mount volume: ", r.Name)
-		return volume.Response{Err: err.Error()}
+		    return &volume.MountResponse{}, err
 	}
-	return volume.Response{Mountpoint: d.MountPoint + "/" + r.Name}
+	return &volume.MountResponse{Mountpoint: d.MountPoint + "/" + r.Name}, nil
 }
 
-func (d SolidFireDriver) Unmount(r volume.Request) volume.Response {
+func (d SolidFireDriver) Unmount(r *volume.UnmountRequest) error {
 	log.Info("Unmounting volume: ", r.Name)
 	sfapi.Umount(filepath.Join(d.MountPoint, r.Name))
 	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
 	if err != nil {
-		return volume.Response{Err: err.Error()}
+		return err
 	}
 	d.Client.DetachVolume(v)
-	return volume.Response{}
+	return nil
 }
 
-func (d SolidFireDriver) Get(r volume.Request) volume.Response {
+func (d SolidFireDriver) Get(r *volume.GetRequest) (*volume.GetResponse, error) {
 	log.Info("Get volume: ", r.Name)
 	path := filepath.Join(d.MountPoint, r.Name)
 	v, err := d.Client.GetVolumeByName(r.Name, d.TenantID)
 	if err != nil {
 		log.Error("Failed to retrieve volume named ", r.Name, "during Get operation: ", err)
-		return volume.Response{Err: err.Error()}
+		return &volume.GetResponse{}, err
 	}
-	return volume.Response{Volume: &volume.Volume{Name: v.Name, Mountpoint: path}}
+	return &volume.GetResponse{Volume: &volume.Volume{Name: v.Name, Mountpoint: path}}, nil
 }
 
-func (d SolidFireDriver) List(r volume.Request) volume.Response {
-	log.Info("Get volume: ", r.Name)
-	path := filepath.Join(d.MountPoint, r.Name)
+func (d SolidFireDriver) List() (*volume.ListResponse, error) {
+	log.Info("List Volumes")
 	var vols []*volume.Volume
 	var req sfapi.ListVolumesForAccountRequest
 	req.AccountID = d.TenantID
 	vlist, err := d.Client.ListVolumesForAccount(&req)
 	if err != nil {
 		log.Error("Failed to retrieve volume list:", err)
-		return volume.Response{Err: err.Error()}
+		return &volume.ListResponse{}, err
 	}
 
 	for _, v := range vlist {
 		if v.Status == "active" && v.AccountID == d.TenantID {
+	        path := filepath.Join(d.MountPoint, v.Name)
 			vols = append(vols, &volume.Volume{Name: v.Name, Mountpoint: path})
 		}
 	}
-	return volume.Response{Volumes: vols}
+	return &volume.ListResponse{Volumes: vols}, nil
 }

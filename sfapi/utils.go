@@ -1,11 +1,12 @@
 package sfapi
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func GetInitiatorIqns() ([]string, error) {
